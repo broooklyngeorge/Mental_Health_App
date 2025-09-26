@@ -1,6 +1,6 @@
 # app.py
 # The main application file for the Mental Health Support Expert System.
-
+import numpy as np
 import streamlit as st
 from knowledge_base import SYMPTOMS
 from inference_engine import InferenceEngine
@@ -137,4 +137,5 @@ def main():
             st.rerun()
 
 if __name__ == "__main__":
+
     main()
