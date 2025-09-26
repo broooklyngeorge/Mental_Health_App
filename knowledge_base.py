@@ -1,68 +1,59 @@
 # knowledge_base.py
-# This module contains the expert knowledge for the mental health support system.
-# It defines symptoms, conditions, rules, and interventions.
 
-# Symptom definitions with user-facing questions and weights
 SYMPTOMS = {
-    'depressed_mood': {'question': "Over the last two weeks, have you felt a persistent low or depressed mood for most of the day, nearly every day?", 'weight': 5},
-    'loss_of_interest': {'question': "Have you experienced a noticeable loss of interest or pleasure in activities you usually enjoy?", 'weight': 5},
-    'weight_change': {'question': "Have you had a significant change in your weight or appetite without trying?", 'weight': 3},
-    'sleep_disturbance': {'question': "Have you been sleeping much more or much less than usual nearly every day?", 'weight': 3},
-    'psychomotor_change': {'question': "Have others noticed that you are either much more restless or much more slowed down than usual?", 'weight': 4},
-    'fatigue': {'question': "Have you been feeling fatigued or a loss of energy nearly every day?", 'weight': 4},
-    'worthlessness_guilt': {'question': "Have you had feelings of worthlessness or excessive guilt?", 'weight': 5},
-    'concentration_difficulty': {'question': "Have you found it difficult to think, concentrate, or make decisions?", 'weight': 3},
-    'suicidal_thoughts': {'question': "Have you had recurrent thoughts of death or suicide?", 'weight': 5},
-    
-    'excessive_worry': {'question': "For the past six months, have you experienced excessive anxiety and worry about a number of different events or activities?", 'weight': 5},
-    'uncontrollable_worry': {'question': "Do you find it very difficult to control your worry?", 'weight': 5},
-    'restlessness': {'question': "Have you been feeling restless, keyed up, or on edge?", 'weight': 4},
-    'irritability': {'question': "Have you experienced irritability?", 'weight': 3},
-    'muscle_tension': {'question': "Have you had muscle tension?", 'weight': 3},
-
-    'work_exhaustion': {'question': "Do you feel a sense of energy depletion or exhaustion primarily related to your work?", 'weight': 5},
-    'work_cynicism': {'question': "Have you felt an increased mental distance from your job, or feelings of negativism or cynicism about it?", 'weight': 5},
-    'reduced_efficacy': {'question': "Have you noticed a reduction in your professional efficacy or a feeling of being less capable at work?", 'weight': 4},
-    
-    'identifiable_stressor': {'question': "Have your symptoms developed in response to an identifiable stressful event within the last 3 months?", 'weight': 5},
+    "depressed_mood": "On a scale of 0 to 10, how would you rate your mood (0 being very low)?",
+    "loss_of_interest": "On a scale of 0 to 10, how would you rate your interest in daily activities?",
+    "fatigue": "On a scale of 0 to 10, how would you rate your energy level (0 being very fatigued)?",
+    "sleep_disturbance": "On a scale of 0 to 10, how would you rate your sleep quality?",
+    "excessive_worry": "On a scale of 0 to 10, how much have you been worrying excessively?",
+    "restlessness": "On a scale of 0 to 10, how restless or on edge have you felt?",
+    "cynicism": "On a scale of 0 to 10, how cynical or detached do you feel from your work?",
+    "professional_efficacy": "On a scale of 0 to 10, how would you rate your sense of professional accomplishment (0 being very low)?"
 }
 
-# Condition definitions with required symptoms and thresholds
 CONDITIONS = {
     'MDD': {
-        'name': "Major Depressive Disorder Pattern",
-        'core_symptoms': ['depressed_mood', 'loss_of_interest'], # Must have at least one
-        'other_symptoms': ['weight_change', 'sleep_disturbance', 'psychomotor_change', 'fatigue', 'worthlessness_guilt', 'concentration_difficulty', 'suicidal_thoughts'],
-        'threshold': 5, # Total symptoms required
-        'explanation': "This pattern is characterized by a persistent depressed mood or loss of interest, along with other symptoms like changes in sleep, energy, and feelings of worthlessness."
+        'name': 'Major Depressive Disorder Pattern',
+        'core_symptoms': ['depressed_mood', 'loss_of_interest'],
+        'other_symptoms': ['fatigue', 'sleep_disturbance'],
+        'threshold': 3,
+        'explanation': 'Your responses show a pattern of low mood and loss of interest, which are key indicators of a depressive episode.'
     },
     'GAD': {
-        'name': "Generalized Anxiety Disorder Pattern",
-        'core_symptoms': ['excessive_worry', 'uncontrollable_worry'], # Must have both
-        'other_symptoms': ['restlessness', 'fatigue', 'concentration_difficulty', 'irritability', 'muscle_tension', 'sleep_disturbance'],
-        'threshold': 3, # Additional symptoms required
-        'explanation': "This pattern involves excessive and difficult-to-control worry about multiple aspects of life, accompanied by physical symptoms like restlessness and fatigue."
+        'name': 'Generalized Anxiety Disorder Pattern',
+        'core_symptoms': ['excessive_worry', 'restlessness'],
+        'other_symptoms': ['fatigue'],
+        'threshold': 3,
+        'explanation': 'Your responses indicate persistent and excessive worry and restlessness, which are hallmarks of an anxiety pattern.'
     },
     'Burnout': {
-        'name': "Burnout Syndrome Pattern",
-        'core_symptoms': ['work_exhaustion', 'work_cynicism', 'reduced_efficacy'], # All three are key dimensions
-        'threshold': 2, # At least two should be prominent
-        'explanation': "This pattern is specifically related to chronic workplace stress and is defined by feelings of exhaustion, cynicism towards one's job, and a sense of reduced professional accomplishment."
-    },
-    'Stress': {
-        'name': "Stressor-Related Pattern",
-        'core_symptoms': ['identifiable_stressor'],
-        'threshold': 1,
-        'explanation': "This pattern suggests that symptoms have emerged in direct response to a recent, identifiable life stressor."
+        'name': 'Burnout Pattern',
+        'core_symptoms': ['fatigue', 'cynicism', 'professional_efficacy'],
+        'other_symptoms': [],
+        'threshold': 2,
+        'explanation': 'Your responses suggest a combination of exhaustion, cynicism, and a reduced sense of accomplishment, which are characteristic of burnout.'
     }
 }
 
-# Evidence-based interventions linked to symptoms
 INTERVENTIONS = {
-    'Reframing Unhelpful Thoughts': {'target': ['worthlessness_guilt', 'excessive_worry'], 'description': "A core CBT technique to identify, challenge, and change negative thought patterns."},
-    'Activity Scheduling': {'target': ['loss_of_interest', 'reduced_efficacy'], 'description': "A Behavioral Activation technique to gradually re-engage in rewarding activities to improve mood and motivation."},
-    'Setting Boundaries': {'target': ['work_exhaustion', 'work_cynicism'], 'description': "Strategies to protect your time and energy, especially in a work context, to prevent burnout."},
-    'Sleep Hygiene Practices': {'target': ['sleep_disturbance'], 'description': "Practices to improve sleep quality, like sticking to a schedule and creating a relaxing bedtime routine."},
-    'Mindfulness & Grounding': {'target': ['restlessness', 'uncontrollable_worry'], 'description': "Techniques like focused breathing to manage acute stress and anxiety by anchoring attention in the present moment."},
-    'General Self-Care': {'target': ['fatigue', 'irritability'], 'description': "Focusing on regular exercise, healthy nutrition, and hydration can significantly impact energy levels and mood."}
+    'Mindful Breathing': {
+        'target': ['excessive_worry', 'restlessness'],
+        'description': 'Practice slow, deep breathing for 5-10 minutes. This can help calm your nervous system.'
+    },
+    'Behavioral Activation': {
+        'target': ['depressed_mood', 'loss_of_interest'],
+        'description': 'Schedule one small, enjoyable activity for tomorrow. Re-engaging with positive activities can help lift your mood.'
+    },
+    'The 5-4-3-2-1 Method': {
+        'target': ['restlessness', 'excessive_worry'],
+        'description': 'Ground yourself by naming: 5 things you see, 4 things you can touch, 3 things you can hear, 2 things you can smell, and 1 thing you can taste.'
+    },
+    'Setting Boundaries': {
+        'target': ['cynicism', 'professional_efficacy'],
+        'description': 'Identify one area at work to set a clear boundary, such as not checking emails after a certain hour, to protect your personal time.'
+    },
+    'Sleep Hygiene': {
+        'target': ['sleep_disturbance', 'fatigue'],
+        'description': 'Improve sleep by creating a routine: go to bed and wake up at the same time, and avoid screens an hour before bed.'
+    }
 }
