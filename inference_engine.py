@@ -1,54 +1,45 @@
 # inference_engine.py
-# This module contains the forward-chaining inference engine.
 
 from knowledge_base import CONDITIONS, INTERVENTIONS
 
 class InferenceEngine:
     def __init__(self):
-        self.facts = {}  # Working memory to store user responses
-        self.fired_rules_log = []  # For XAI - Initialized as an empty list
+        self.facts = {}
+        self.fired_rules_log = []
 
     def add_fact(self, symptom, value):
-        """Adds a fact (user response) to the working memory."""
         self.facts[symptom] = value
 
     def run(self):
-        """Runs the inference engine to determine condition patterns and suggest interventions."""
-        detected_conditions = []  # Initialized as an empty list
-        
-        # Rule Matching and Firing Logic
+        self.fired_rules_log = []
+        detected_conditions = []
+        present_symptoms = {s for s, v in self.facts.items() if v >= 5}
+
         for condition_id, details in CONDITIONS.items():
-            # Consider symptoms with severity > 3
-            present_symptoms = [s for s, v in self.facts.items() if v > 3]
-            
-            # Check core symptoms
             core_symptoms_present = [s for s in details['core_symptoms'] if s in present_symptoms]
             
-            # Specificity Check
             core_condition_met = False
             if condition_id == 'MDD' and len(core_symptoms_present) >= 1:
                 core_condition_met = True
             elif condition_id == 'GAD' and len(core_symptoms_present) == len(details['core_symptoms']):
                 core_condition_met = True
-            # Assuming 'Burnout' and 'Stress' also need at least one core symptom
-            elif condition_id in ['Burnout', 'Stress'] and len(core_symptoms_present) >= 1:
+            elif condition_id == 'Burnout' and len(core_symptoms_present) >= details.get('threshold', 2):
                 core_condition_met = True
 
             if core_condition_met:
-                # Check total symptom count against threshold
                 other_symptoms_present = [s for s in details.get('other_symptoms', []) if s in present_symptoms]
                 total_symptoms = len(core_symptoms_present) + len(other_symptoms_present)
                 
                 if total_symptoms >= details['threshold']:
-                    # If rule conditions are met, add to detected conditions
                     detected_conditions.append({
                         'name': details['name'],
                         'explanation': details['explanation'],
-                        'symptoms': core_symptoms_present + other_symptoms_present
+                        'symptoms_matched': core_symptoms_present + other_symptoms_present
                     })
-                    self.fired_rules_log.append(f"Rule for {details['name']} was triggered.")
+                    self.fired_rules_log.append(
+                        f"Rule for '{details['name']}' triggered due to symptoms: {', '.join(core_symptoms_present + other_symptoms_present)}."
+                    )
 
-        # Suggest interventions based on all reported symptoms
         suggested_interventions = {}
         reported_symptoms = list(self.facts.keys())
         for name, details in INTERVENTIONS.items():
