@@ -6,7 +6,7 @@ from knowledge_base import CONDITIONS, INTERVENTIONS
 class InferenceEngine:
     def __init__(self):
         self.facts = {} # Working memory to store user responses
-        self.fired_rules_log = # For XAI
+        self.fired_rules_log = [] # For XAI
 
     def add_fact(self, symptom, value):
         """Adds a fact (user response) to the working memory."""
@@ -55,5 +55,6 @@ class InferenceEngine:
         for name, details in INTERVENTIONS.items():
             if any(s in reported_symptoms for s in details['target']):
                 suggested_interventions[name] = details['description']
+
 
         return detected_conditions, suggested_interventions, self.fired_rules_log
