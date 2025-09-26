@@ -1,141 +1,125 @@
 # app.py
-# The main application file for the Mental Health Support Expert System.
-import numpy as np
+
 import streamlit as st
+import numpy as np  # Added this import to fix the NameError
 from knowledge_base import SYMPTOMS
 from inference_engine import InferenceEngine
 from fuzzy_engine import create_fuzzy_control_system, calculate_concern_level
 
 def initialize_session_state():
     """Initializes variables in Streamlit's session state."""
-    if 'stage' not in st.session_state:
-        st.session_state.stage = 'intro'
-    if 'symptom_keys' not in st.session_state:
-        st.session_state.symptom_keys = list(SYMPTOMS.keys())
-    if 'current_symptom_index' not in st.session_state:
-        st.session_state.current_symptom_index = 0
-    if 'engine' not in st.session_state:
-        st.session_state.engine = InferenceEngine()
-    if 'fuzzy_system' not in st.session_state:
-        st.session_state.fuzzy_system = create_fuzzy_control_system()
+    if 'symptom_inputs' not in st.session_state:
+        # Default all symptoms to a neutral value of 5
+        st.session_state.symptom_inputs = {symptom_id: 5 for symptom_id in SYMPTOMS.keys()}
     if 'results' not in st.session_state:
         st.session_state.results = None
+    if 'fuzzy_system' not in st.session_state:
+        # Create and store the fuzzy system once per session
+        st.session_state.fuzzy_system = create_fuzzy_control_system()
 
-def main():
-    """Main function to run the Streamlit application."""
-    initialize_session_state()
+# --- Page Configuration ---
+st.set_page_config(
+    page_title="Mindful AI Advisor",
+    page_icon="🧠",
+    layout="wide"
+)
 
-    st.set_page_config(page_title="Mental Wellness Assistant", layout="centered")
+# --- Initialize ---
+initialize_session_state()
+engine = InferenceEngine()
 
-    # --- UI Styling for a Calmer Experience ---
-    st.markdown("""
-        <style>
-       .stApp {
-            background-color: #F0F2F6;
-        }
-       .st-emotion-cache-16txtl3 {
-            padding: 2rem 1rem 10rem;
-        }
-       .stButton>button {
-            border-radius: 20px;
-            border: 1px solid #4A90E2;
-            background-color: #FFFFFF;
-            color: #4A90E2;
-        }
-       .stButton>button:hover {
-            border: 1px solid #357ABD;
-            background-color: #F0F8FF;
-            color: #357ABD;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+# --- UI Layout ---
+st.title("🧠 Mindful AI Advisor")
+st.markdown(
+    "This is an educational tool demonstrating an expert system. "
+    "It is **not** a substitute for professional medical advice."
+)
 
-    st.title("Mental Wellness Assistant")
+# --- Sidebar for User Input ---
+with st.sidebar:
+    st.header("Symptom Assessment")
+    st.markdown("Rate your feelings over the last two weeks from 0 (Not at all) to 10 (Constantly).")
+    
+    # Create a slider for each symptom
+    for symptom_id, question in SYMPTOMS.items():
+        st.session_state.symptom_inputs[symptom_id] = st.slider(
+            question, 0, 10, st.session_state.symptom_inputs[symptom_id]
+        )
 
-    if st.session_state.stage == 'intro':
-        st.info("**Disclaimer:** This is an educational tool and not a substitute for professional medical advice. If you are in crisis, please contact a helpline or emergency services immediately.", icon="⚠️")
-        st.write("Hello! I'm here to help you reflect on your well-being. We'll go through a few questions together. Your responses are not stored after you close this window.")
-        if st.button("Let's Begin"):
-            st.session_state.stage = 'assessment'
-            st.rerun()
+    # Analyze button
+    analyze_button = st.button("Analyze My Responses", type="primary")
 
-    elif st.session_state.stage == 'assessment':
-        idx = st.session_state.current_symptom_index
-        if idx < len(st.session_state.symptom_keys):
-            symptom_key = st.session_state.symptom_keys[idx]
-            symptom_info = SYMPTOMS[symptom_key]
-            
-            st.write(f"**Question {idx + 1}/{len(st.session_state.symptom_keys)}**")
-            st.write(symptom_info['question'])
-            
-            severity = st.slider("On a scale of 0 (Not at all) to 10 (Extremely), how much has this affected you?", 0, 10, 0, key=f"slider_{symptom_key}")
+    # Reset button
+    if st.button("Reset"):
+        st.session_state.symptom_inputs = {symptom_id: 5 for symptom_id in SYMPTOMS.keys()}
+        st.session_state.results = None
+        st.rerun()
 
-            if st.button("Next Question", key=f"btn_{symptom_key}"):
-                if severity > 0:
-                    st.session_state.engine.add_fact(symptom_key, severity)
-                st.session_state.current_symptom_index += 1
-                st.rerun()
+
+# --- Main Panel for Results ---
+if analyze_button:
+    # Add all user inputs as facts to the inference engine
+    for symptom_id, value in st.session_state.symptom_inputs.items():
+        engine.add_fact(symptom_id, value)
+    
+    # Run the rule-based engine
+    conditions, interventions, log = engine.run()
+    
+    # Run the fuzzy logic engine - CORRECTED CALL
+    concern_level = calculate_concern_level(
+        st.session_state.fuzzy_system,
+        st.session_state.symptom_inputs  # Pass the entire dictionary of inputs
+    )
+    
+    # Store results in session state
+    st.session_state.results = {
+        "conditions": conditions,
+        "interventions": interventions,
+        "log": log,
+        "concern": concern_level
+    }
+
+# --- Display Results ---
+if st.session_state.results:
+    results = st.session_state.results
+    st.markdown("---")
+    st.header("Assessment Results")
+
+    # Display Fuzzy Logic Concern Level
+    st.subheader("Fuzzy Logic Concern Level")
+    st.progress(results['concern'] / 10.0)
+    st.info(
+        f"Based on your mood, interest, and worry levels, the system calculated a general concern score of "
+        f"**{results['concern']:.2f} out of 10**. This provides a blended, nuanced view of your inputs."
+    )
+
+    # Display Detected Patterns (from Inference Engine)
+    st.subheader("Detected Symptom Patterns")
+    if not results['conditions']:
+        st.success("No specific symptom patterns were strongly detected based on the defined rules.")
+    else:
+        for condition in results['conditions']:
+            with st.container(border=True):
+                st.markdown(f"#### {condition['name']}")
+                st.write(condition['explanation'])
+                st.caption(f"**Matched Symptoms:** {', '.join(condition['symptoms_matched'])}")
+
+    # Display Suggested Interventions
+    st.subheader("Suggested Self-Help Interventions")
+    if not results['interventions']:
+        st.write("No specific interventions to suggest at this time.")
+    else:
+        for name, desc in results['interventions'].items():
+            st.markdown(f"**{name}:** {desc}")
+    
+    # Display Explainable AI (XAI) Log
+    with st.expander("Show Explanation Log (XAI)"):
+        st.write("This log shows which rules in the expert system were triggered during the analysis.")
+        if not results['log']:
+            st.write("No rules were triggered.")
         else:
-            st.session_state.stage = 'calculating'
-            st.rerun()
+            for entry in results['log']:
+                st.code(entry, language='text')
 
-    elif st.session_state.stage == 'calculating':
-        with st.spinner("Analyzing your responses..."):
-            # Run Inference Engine
-            detected, interventions, log = st.session_state.engine.run()
-            
-            # Calculate Fuzzy Concern Level
-            reported_severities = list(st.session_state.engine.facts.values())
-            avg_severity = np.mean(reported_severities) if reported_severities else 0
-            symptom_count = len(reported_severities)
-            concern_score = calculate_concern_level(st.session_state.fuzzy_system, avg_severity, symptom_count)
-            
-            st.session_state.results = {
-                "detected": detected,
-                "interventions": interventions,
-                "log": log,
-                "concern_score": concern_score
-            }
-            st.session_state.stage = 'summary'
-            st.rerun()
-
-    elif st.session_state.stage == 'summary':
-        results = st.session_state.results
-        
-        st.header("Your Wellness Summary")
-        
-        st.progress(int(results['concern_score']), text=f"Overall Concern Level: {int(results['concern_score'])}/100")
-        st.write("This score is calculated based on the number and severity of the symptoms you reported. It is an indicator for reflection, not a diagnosis.")
-
-        if not results['detected']:
-            st.success("Based on your responses, no specific patterns of concern were strongly indicated. It's always great to be proactive about your mental well-being!")
-        else:
-            st.subheader("Potential Patterns for Reflection:")
-            for condition in results['detected']:
-                with st.container(border=True):
-                    st.markdown(f"**{condition['name']}**")
-                    st.write(condition['explanation'])
-
-        if results['interventions']:
-            st.subheader("Suggested Self-Help Strategies:")
-            for name, desc in results['interventions'].items():
-                with st.expander(f"Learn about: **{name}**"):
-                    st.write(desc)
-        
-        # XAI Component
-        with st.expander("How was this summary generated? (Explainable AI)"):
-            st.write("This summary was generated by an expert system that analyzed your responses using a set of rules based on clinical guidelines.")
-            st.write("The following reasoning steps were part of the process:")
-            for log_entry in results['log']:
-                st.text(f"- {log_entry}")
-            st.write(f"A fuzzy logic system then calculated the overall concern score based on an average symptom severity of {np.mean(list(st.session_state.engine.facts.values())):.1f} and a count of {len(st.session_state.engine.facts)} reported symptoms.")
-
-        if st.button("Start Over"):
-            # Reset the session state completely
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-
-if __name__ == "__main__":
-
-    main()
+else:
+    st.info("Please adjust the sliders in the sidebar and click 'Analyze My Responses' to see your results.")
