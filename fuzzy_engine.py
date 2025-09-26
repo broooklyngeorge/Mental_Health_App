@@ -1,60 +1,63 @@
 # fuzzy_engine.py
-# This module implements the fuzzy logic system for assessing symptom severity and calculating a concern level.
 
 import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 
 def create_fuzzy_control_system():
-    """
-    Creates and configures the fuzzy control system for calculating concern level.
-    """
-    # Define Antecedents (Inputs) and Consequent (Output)
-    # Universe of discourse for inputs and output
-    symptom_severity = ctrl.Antecedent(np.arange(0, 11, 1), 'symptom_severity')
-    symptom_count = ctrl.Antecedent(np.arange(0, 10, 1), 'symptom_count')
-    concern_level = ctrl.Consequent(np.arange(0, 101, 1), 'concern_level')
+    """Creates and returns the fuzzy control system and its simulation."""
+    # Define Antecedents (Inputs) on a 0-10 scale
+    mood = ctrl.Antecedent(np.arange(0, 11, 1), 'mood')
+    interest = ctrl.Antecedent(np.arange(0, 11, 1), 'interest')
+    worry = ctrl.Antecedent(np.arange(0, 11, 1), 'worry')
 
-    # Define Membership Functions using trapezoidal shapes for clear low/medium/high ranges
-    symptom_severity['low'] = fuzz.trapmf(symptom_severity.universe, )
-    symptom_severity['medium'] = fuzz.trapmf(symptom_severity.universe, )
-    symptom_severity['high'] = fuzz.trapmf(symptom_severity.universe, )
+    # Define Consequent (Output) on a 0-10 scale
+    concern = ctrl.Consequent(np.arange(0, 11, 1), 'concern')
 
-    symptom_count['low'] = fuzz.trapmf(symptom_count.universe, )
-    symptom_count['medium'] = fuzz.trapmf(symptom_count.universe, )
-    symptom_count['high'] = fuzz.trapmf(symptom_count.universe, )
-    
-    concern_level['low'] = fuzz.trapmf(concern_level.universe, )
-    concern_level['moderate'] = fuzz.trapmf(concern_level.universe, )
-    concern_level['high'] = fuzz.trapmf(concern_level.universe, )
+    # Define Membership Functions for Inputs using trapezoidal shapes
+    # Format: [start, peak_start, peak_end, end]
+    mood['low'] = fuzz.trapmf(mood.universe, [0, 0, 2, 4])
+    mood['medium'] = fuzz.trapmf(mood.universe, [3, 4, 6, 7])
+    mood['high'] = fuzz.trapmf(mood.universe, [6, 8, 10, 10])
+
+    interest['low'] = fuzz.trapmf(interest.universe, [0, 0, 2, 4])
+    interest['medium'] = fuzz.trapmf(interest.universe, [3, 4, 6, 7])
+    interest['high'] = fuzz.trapmf(interest.universe, [6, 8, 10, 10])
+
+    worry['low'] = fuzz.trapmf(worry.universe, [0, 0, 2, 4])
+    worry['medium'] = fuzz.trapmf(worry.universe, [3, 4, 6, 7])
+    worry['high'] = fuzz.trapmf(worry.universe, [6, 8, 10, 10])
+
+    # Define Membership Functions for Output
+    concern['low'] = fuzz.trapmf(concern.universe, [0, 0, 2, 4])
+    concern['moderate'] = fuzz.trapmf(concern.universe, [3, 4, 6, 7])
+    concern['high'] = fuzz.trapmf(concern.universe, [6, 8, 10, 10])
 
     # Define Fuzzy Rules
-    # These rules encode the expert logic: e.g., high severity and high count -> high concern
-    rule1 = ctrl.Rule(symptom_severity['low'] & symptom_count['low'], concern_level['low'])
-    rule2 = ctrl.Rule(symptom_severity['medium'] & symptom_count['low'], concern_level['low'])
-    rule3 = ctrl.Rule(symptom_severity['low'] & symptom_count['medium'], concern_level['moderate'])
-    rule4 = ctrl.Rule(symptom_severity['medium'] & symptom_count['medium'], concern_level['moderate'])
-    rule5 = ctrl.Rule(symptom_severity['high'] & symptom_count['medium'], concern_level['high'])
-    rule6 = ctrl.Rule(symptom_count['high'], concern_level['high'])
-    rule7 = ctrl.Rule(symptom_severity['high'], concern_level['high'])
+    rule1 = ctrl.Rule(mood['low'] & interest['low'], concern['high'])
+    rule2 = ctrl.Rule(worry['high'], concern['high'])
+    rule3 = ctrl.Rule(mood['medium'] | interest['medium'] | worry['medium'], concern['moderate'])
+    rule4 = ctrl.Rule(mood['high'] & interest['high'] & worry['low'], concern['low'])
 
-    # Create the Control System
-    concern_ctrl = ctrl.ControlSystem([rule1, rule2, rule3, rule4, rule5, rule6, rule7])
+    # Create Control System
+    concern_ctrl = ctrl.ControlSystem([rule1, rule2, rule3, rule4])
+    concern_simulation = ctrl.ControlSystemSimulation(concern_ctrl)
     
-    return concern_ctrl
+    return concern_simulation
 
-def calculate_concern_level(fuzzy_system, average_severity, count):
-    """
-    Calculates a crisp concern level using the fuzzy control system.
-    """
-    concern_simulation = ctrl.ControlSystemSimulation(fuzzy_system)
-    
-    # Pass inputs to the ControlSystemSimulation
-    concern_simulation.input['symptom_severity'] = average_severity
-    concern_simulation.input['symptom_count'] = count
-    
-    # Compute the result
-    concern_simulation.compute()
-    
-    # Return the defuzzified, crisp output value
-    return concern_simulation.output['concern_level']
+def calculate_concern_level(simulation, user_inputs):
+    """Calculates and returns the defuzzified concern level."""
+    try:
+        # Provide default neutral values if a symptom isn't in the user_inputs dict
+        simulation.input['mood'] = user_inputs.get('depressed_mood', 5)
+        simulation.input['interest'] = user_inputs.get('loss_of_interest', 5)
+        simulation.input['worry'] = user_inputs.get('excessive_worry', 5)
+        
+        # Compute the result
+        simulation.compute()
+        
+        return simulation.output['concern']
+    except Exception as e:
+        # Fallback to a neutral value if any error occurs during fuzzy computation
+        print(f"Fuzzy calculation error: {e}")
+        return 5.0
